@@ -8,6 +8,10 @@ Author: Caroline Graebel
 	- [Merging the data from the two database versions](#merging)
 	- [Removing duplicated analysis](#removing-duplicates)
 	- [Variable Selection based on missingness](#handle-missingness)
+- [Analysing the relationship between code smells and other variables](#analysis)
+	- [Correlation Analysis](#correlation-analysis)
+		- [Correlations between all numerical variables](#correlation-between-all)
+		- [Correlations between amount of code smells and metrics](#correlation-between-cs-nums)
 
 <a name="data"></a>
 ## Data
@@ -52,3 +56,20 @@ The final resulting dataframe contains 62 columns.
 ### Dropping numerical variables with static values
 When investigating the correlation of variables, there are some variables that can't be correlated. Through investigation it can be shown that some metrics only contain static values over all rows (0). When training a model, metrics that only contain a static value doesn't provide meaningful information (variance) to the learning process. Therefore, they are getting removed. <br>
 The resulting dataframe contains 53 columns.
+
+<a name="analysis"></a>
+## Analysing the relationship between code smells and other variables
+To gain further insights on a sensible modelling approach, the relationship between code smells and other metrics needs to be understood.
+
+<a name="correlation-analysis"></a>
+### Correlation Analysis
+Since most variables (including amount of code smells) are numerical, a regression approach might be sensible. For this, it is useful to know which variables correlate and therefore might be good predictors.
+
+<a name="correlation-between-all"></a>
+#### Correlations between all numerical variables
+Plotting a correlation matrix for all numerical variables in the dataset reveals that there are a lot of static columns in the dataset. These are removed. <br>
+For the remaining columns, a lot of metrics correlate postively and strongly with each other. Only the technical debt measurement variables SQALE_DEBT_RATIO and NEW_SQALE_DEBT_RATIO and COMMENT_LINES_DENSITY correlate little to negatively with most metrics.
+
+<a name="correlation-between-cs-nums"></a>
+#### Correlations between amount of code smells and metrics
+When plotting the correlations between the amount of code smells and other metrics specifically, it shows that code smells has a very strong positive correlation to most of the metrics, with only the technical debt measures and COMMENT_LINE_DENSITY correlating little or strongly negatively. The amount of code smells might be predictable through a simple regression model.
