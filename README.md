@@ -5,6 +5,8 @@ Author: Caroline Graebel
 - [Data](#data)
 	- [Data Source](#data-source)
 	- [Licensing](#licensing)
+	- [Project Selection](#project-selection)
+	- [Cleaning the Tags in SonarQube Issues](#cleaning-issues)
 	- [Merging the data from the two database versions](#merging)
 	- [Removing duplicated analysis](#removing-duplicates)
 	- [Variable Selection based on missingness](#handle-missingness)
@@ -32,6 +34,12 @@ The Technical Debt Dataset is used in this project for research purposes and the
 <a name="project-selection"></a>
 ### Project Selection
 There are two versions of the Technical Dataset published on Github. It is stated that for version 2 some new projects are in the database while others have been removed [(Technical Dataset Github Release Notes)](https://github.com/clowee/The-Technical-Debt-Dataset/releases). To maximise data, projects from the first version of the database that haven't been updated in the second version are used along the new and updated projects from version 2.
+
+<a name="cleaning-issues"></a>
+### Cleaning the Tags in SonarQube Issues
+To prepare the data for the model, only issues that are code smells are selected. Only columns needed to identify the analysis, tags and issue messages are selected. <br>
+Version 1 doesn't contain a tag column, only version 2 provides information on what tags are associated with the code smell issues. However, the issue message can be in most cases consistently assigned to a set of tags. An exception are messages that are very rare. This makes it possible to infer issue tags for version 1 for the issue messages that are known from version 2. For this, the messages are cleaned off specifics, like concrete variable names or counts. For version 2, there are 390 unique messages after cleaning. When extracting unique tag and message pairs, there are 393 pairs, showing that the pairing of messages and tags is almost completely consistent. Investigated exceptions either have missing tags or contain a subset of tags ("convention" vs "convention,psr2"). When cleaning the messages for version 1 and investigating the intersection between version 1 and version 2 messages, it could be shown that 268/340 unique messages of version 1 are contained in version 2 as well. Furthermore, messages that are not directly contained in version 2 still can be assigned to consistent tags by using a striking substring of the message. Only for some substrings, there are no tags connected at all. Given the strong consistency, for 99.98% of version 1 tags can be inferred by using the issue message. <br>
+For version 2, unique tags for each analysis are extracted and saved.
 
 <a name="merging"></a>
 ### Merging the data from the two database versions
