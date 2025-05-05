@@ -10,10 +10,13 @@ Author: Caroline Graebel
 	- [Merging the data from the two database versions](#merging)
 	- [Removing duplicated analysis](#removing-duplicates)
 	- [Variable Selection based on missingness](#handle-missingness)
-- [Analysing the relationship between code smells and other variables](#analysis)
-	- [Correlation Analysis](#correlation-analysis)
+- [Analyses](#analysis)
+	- [Correlation Analysis between Code Smells and other variables](#correlation-analysis)
 		- [Correlations between all numerical variables](#correlation-between-all)
 		- [Correlations between amount of code smells and metrics](#correlation-between-cs-nums)
+	- [Analysing Tags](#tags-analysis)
+		- [Missingness of Tags](#tags-missing)
+		- [Distribution of Tags](#tags-distribution)
 
 <a name="data"></a>
 ## Data
@@ -66,11 +69,11 @@ When investigating the correlation of variables, there are some variables that c
 The resulting dataframe contains 53 columns.
 
 <a name="analysis"></a>
-## Analysing the relationship between code smells and other variables
-To gain further insights on a sensible modelling approach, the relationship between code smells and other metrics needs to be understood.
+## Analyses
 
 <a name="correlation-analysis"></a>
 ### Correlation Analysis
+To gain further insights on a sensible modelling approach, the relationship between code smells and other metrics needs to be understood. <br>
 Since most variables (including amount of code smells) are numerical, a regression approach might be sensible. For this, it is useful to know which variables correlate and therefore might be good predictors.
 
 <a name="correlation-between-all"></a>
@@ -81,3 +84,16 @@ For the remaining columns, a lot of metrics correlate postively and strongly wit
 <a name="correlation-between-cs-nums"></a>
 #### Correlations between amount of code smells and metrics
 When plotting the correlations between the amount of code smells and other metrics specifically, it shows that code smells has a very strong positive correlation to most of the metrics, with only the technical debt measures and COMMENT_LINE_DENSITY correlating little or strongly negatively. The amount of code smells might be predictable through a simple regression model.
+
+<a name="tags-analysis"></a>
+### Analysing Tags
+For using tags as a label, it's important to know their missingness and their distribution. At first, this is only done for the version 2 data, as version 1 doesn't contain tags.
+
+<a name="tags-missing"></a>
+#### Missingness of Tags
+Over all ~1 million rows containing code smells and open issues,  23697 rows have missing tags. This equals 0.11% of all data. <br>
+When investigating missingness by project, it can be shown that there are some projects for which a lot of the tags are missing. For Santuario and Digester, over 50% of tags are missing. Only for two thirds of the projects there are missing values at all.
+
+<a name="tags-distribution"></a>
+#### Distribution of Tags
+To count tags, the tags are generalised per analysis. One analysis can find multiple code smell issues that have multiple tags. Tags are generalised through counting only the unique tags occuring for one analysis. When plotting the resulting distribution of generalised tags, a bit over half of the tags occuring in the data are well represented, ranging from 1-12% occurence. The rest are rarely used and probably can't be meaningfully used for modelling.
