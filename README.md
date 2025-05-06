@@ -10,7 +10,7 @@ Author: Caroline Graebel
 	- [Merging the data from the two database versions](#merging)
 	- [Removing duplicated analysis](#removing-duplicates)
 	- [Variable Selection based on missingness](#handle-missingness)
-- [Analyses](#analysis)
+- [Analysis](#analysis)
 	- [Correlation Analysis between Code Smells and other variables](#correlation-analysis)
 		- [Correlations between all numerical variables](#correlation-between-all)
 		- [Correlations between amount of code smells and metrics](#correlation-between-cs-nums)
@@ -72,7 +72,7 @@ When investigating the correlation of variables, there are some variables that c
 The resulting dataframe contains 53 columns.
 
 <a name="analysis"></a>
-## Analyses
+## Analysis
 
 <a name="correlation-analysis"></a>
 ### Correlation Analysis
