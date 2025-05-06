@@ -17,6 +17,9 @@ Author: Caroline Graebel
 	- [Analysing Tags](#tags-analysis)
 		- [Missingness of Tags](#tags-missing)
 		- [Distribution of Tags](#tags-distribution)
+	- [Analysing the number of issues per commit and duplicated issues](#num-issues-duplis)
+		- [Connection between a commit and the numbers of issues](#num-issues-per-commit)
+		- [Investigating the repetition of issues over different analysis](#duplication-analysis)
 
 <a name="data"></a>
 ## Data
@@ -97,3 +100,22 @@ When investigating missingness by project, it can be shown that there are some p
 <a name="tags-distribution"></a>
 #### Distribution of Tags
 To count tags, the tags are generalised per analysis. One analysis can find multiple code smell issues that have multiple tags. Tags are generalised through counting only the unique tags occuring for one analysis. When plotting the resulting distribution of generalised tags, a bit over half of the tags occuring in the data are well represented, ranging from 1-12% occurence. The rest are rarely used and probably can't be meaningfully used for modelling.
+
+<a name="num-issues-duplis"></a>
+### Analysing the number of issues per commit and duplicated issues
+In the version 1 data, each issue is defined by the ID of the commit it got introduced in and (if solved) which commit fixed the issue. For version 2, an analysis key is given to each issue that links it to the commit over another table. It is to be investigated whether the two data versions both display a link to the introducing commit by investigating how the metrics of the analysis link to the issues. It is expected that each issue is linked to one commit and therefore analysis. <br>
+Another investigation is necessary to understand whether known code smells are repeatedly found and noted for each commit or whether already identified errors are listed again for each analysis or not. The expectation is that known issues aren't repeatedly listed if already identified. <br>
+The investigation is done only for the smallest  project in the dataset, Apache Commons Daemon (version 1: commons-daemon, version 2: org.apache:daemon), to make the results comprehensible by eye.
+
+<a name="num-issues-per-commit"></a>
+#### Connection between a commit and the numbers of issues
+For version 1, when joining the metrics to the issues over the commit hash it could be shown that each commit indead has one or multiple issues. <br>
+For version 2, when joining the metrics and issue table over the analysis key, it could be shown that similar to version 1, each commit has one or multiple issues. <br>
+For both versions, there are some commits that introduce a lot more issues than others, with the Apache Commons Daemon project introducing max. 348 issues with one commit opposed to mostly issue amounts smaller than ten in version 1, and max. 45 issues for version 2. It might be challenging to predict all the tags associated with such issue heavy commit. Therefore, not only the distribution of tags should be reconsidered when cutting out observations but also the amount of issues detected in it.
+
+<a name="duplication-analysis"></a>
+#### Investigating the repetition of issues over different analysis
+To expose duplications, identifier columns are dropped and duplicates are extracted. <br>
+For version 1, there are 5 out of 393 issues that are duplicates. All duplicates describe fixed issues. Therefore, there are 0 open duplicated issues in the version 1 data. <br>
+For version 2, there are 7 duplications for 796 issues. Importantly, these 7 duplications are open issues. There are no clues to hint at a systematic occurence. It is more probable, that the few duplicated errors are reintroduced errors over different commits. <br>
+As a result, it could be confirmed that issues only get tracked once in the commits they got introduced.
