@@ -16,7 +16,9 @@ Author: Caroline Graebel
 		- [Correlations between amount of code smells and metrics](#correlation-between-cs-nums)
 	- [Analysing Tags](#tags-analysis)
 		- [Missingness of Tags](#tags-missing)
-		- [Distribution of Tags](#tags-distribution)
+		- [Distribution of Tags for version 2](#tags-distribution2)
+		- [Distribution of Tags for version 1](#tags-distribution1)
+		- [Distribution of Tags for versions 1 and 2 combined]((tags-distribution1+2)
 	- [Analysing the number of issues per commit and duplicated issues](#num-issues-duplis)
 		- [Connection between a commit and the numbers of issues](#num-issues-per-commit)
 		- [Investigating the repetition of issues over different analysis](#duplication-analysis)
@@ -91,16 +93,25 @@ When plotting the correlations between the amount of code smells and other metri
 
 <a name="tags-analysis"></a>
 ### Analysing Tags
-For using tags as a label, it's important to know their missingness and their distribution. At first, this is only done for the version 2 data, as version 1 doesn't contain tags.
+For using tags as a label, it's important to know their missingness and their distribution. Version 2 comes with tags assigned, for version 1 they are generated. First, version 2 is investigated for the amount of missing tags globally and per project. Then, the distribution of tags is analysed. This is done for version 1 as well. The goal is to understand which tags are useful for modelling. Lastly, the distribution of tags when taking together both versions is investigated.
 
 <a name="tags-missing"></a>
 #### Missingness of Tags
 Over all ~1 million rows containing code smells and open issues,  23697 rows have missing tags. This equals 0.11% of all data. <br>
 When investigating missingness by project, it can be shown that there are some projects for which a lot of the tags are missing. For Santuario and Digester, over 50% of tags are missing. Only for two thirds of the projects there are missing values at all.
 
-<a name="tags-distribution"></a>
-#### Distribution of Tags
-To count tags, the tags are generalised per analysis. One analysis can find multiple code smell issues that have multiple tags. Tags are generalised through counting only the unique tags occuring for one analysis. When plotting the resulting distribution of generalised tags, a bit over half of the tags occuring in the data are well represented, ranging from 1-12% occurence. The rest are rarely used and probably can't be meaningfully used for modelling.
+<a name="tags-distribution2"></a>
+#### Distribution of Tags for version 2
+To count tags, the tags are generalised per analysis. One analysis can find multiple code smell issues that have multiple tags. Tags are generalised through counting only the unique tags occuring for one analysis. When plotting the resulting distribution of generalised tags, a bit over half of the tags occuring in the data are well represented, ranging from 1-12% occurence. The rest are rarely used and probably can't be meaningfully used for modelling. <br>
+Furthermore, CERT, CWE and MISRA tags are given for the violation of rule sets that describe a coding standard violation rather than a specific issue ([SonarQube Tag Documentation](https://docs.sonarsource.com/sonarqube-server/9.8/user-guide/rules/built-in-rule-tags/)). These should be removed, as they don't describe a concrete type of code smell. 
+
+<a name="tags-distribution1"></a>
+#### Distribution of Tags for version 1
+The analysis is done similarly to version 2. The distribution is similar, with some tags having different positions ordered by occurence. The tail is also not as long as in version 2, as only 26 out of 31 tags appear. Most tags also have an occurence of 1-12% in the data.
+
+<a name="tags-distribution1+2"></a>
+#### Distribution of Tags for versions 1 and 2 combined
+When putting together the tag counts of version 1 and 2, all tags are represented. Only the most common variables have significantly been increased by adding version 1 and 2 together. 
 
 <a name="num-issues-duplis"></a>
 ### Analysing the number of issues per commit and duplicated issues
