@@ -22,13 +22,22 @@ Author: Caroline Graebel
 	- [Analysing the number of issues per commit and duplicated issues](#num-issues-duplis)
 		- [Connection between a commit and the numbers of issues](#num-issues-per-commit)
 		- [Investigating the repetition of issues over different analysis](#duplication-analysis)
+- [Models](#models)
+	- [Predicting the amount of Code Smells](#code-smell-prediction)
+		- [Data preparation for models](#data-prep-cs)
+		- [Fitting models to predict the amount of Code Smells](#fitting-models-cs)
+			- [Multiple Linear Regression](#mlr-cs)
+			- [Generalised Additive Model](#gam-cs)
+			- [Projection Pursuit Regression](#ppr-cs)
+			- [XGBoost](#xgboost-cs)
+		- [Results](#results-cs)
 
 <a name="data"></a>
 ## Data
 
 <a name="data-source"></a>
 ### Data Source
-All projects are sourced from [The Technical Debt Dataset](https://doi.org/10.1145/3345629.3345630). The data contains SonarQube analysis data for multiple Github projects. All projects fulfill the following requirements:
+The project data originates from [The Technical Debt Dataset](https://doi.org/10.1145/3345629.3345630), which contains SonarQube analysis data for multiple GitHub projects. The selection criteria for these projects included:
 * Developed in Java
 * Older than three years
 * More than 500 commits
@@ -37,18 +46,18 @@ All projects are sourced from [The Technical Debt Dataset](https://doi.org/10.11
 
 <a name="licensing"></a>
 ### Licensing
-The Technical Debt Dataset is used in this project for research purposes and therefore follows the licensing guidelines given by the creators [(README: Chapter License)](https://github.com/clowee/The-Technical-Debt-Dataset).
+This research project adheres to the licensing guidelines provided by the creators of The Technical Debt Dataset, as detailed in the [(README: Chapter License)](https://github.com/clowee/The-Technical-Debt-Dataset).
 
 <a name="project-selection"></a>
 ### Project Selection
-There are two versions of the Technical Dataset published on Github. It is stated that for version 2 some new projects are in the database while others have been removed [(Technical Dataset Github Release Notes)](https://github.com/clowee/The-Technical-Debt-Dataset/releases). To maximise data, projects from the first version of the database that haven't been updated in the second version are used along the new and updated projects from version 2.
+The analysis leverages two versions of The Technical Debt Dataset available on GitHub. Version 2 incorporates new projects and removes some existing ones, as outlined in the [(Technical Dataset Github Release Notes)](https://github.com/clowee/The-Technical-Debt-Dataset/releases). To maximise the dataset, projects unique to the first version were combined with the updated and new projects from the second version.
 
 <a name="cleaning-issues"></a>
 ### Cleaning the Tags in SonarQube Issues
 To prepare the data for the model, only issues that are code smells are selected. Only columns needed to identify the analysis, tags and issue messages are selected. <br>
 Version 1 doesn't contain a tag column, only version 2 provides information on what tags are associated with the code smell issues. However, the issue message can be in most cases consistently assigned to a set of tags. An exception are messages that are very rare. This makes it possible to infer issue tags for version 1 for the issue messages that are known from version 2. For this, the messages are cleaned off specifics, like concrete variable names or counts. For version 2, there are 390 unique messages after cleaning. When extracting unique tag and message pairs, there are 393 pairs, showing that the pairing of messages and tags is almost completely consistent. Investigated exceptions either have missing tags or contain a subset of tags ("convention" vs "convention,psr2"). When cleaning the messages for version 1 and investigating the intersection between version 1 and version 2 messages, it could be shown that 268/340 unique messages of version 1 are contained in version 2 as well. Furthermore, messages that are not directly contained in version 2 still can be assigned to consistent tags by using a striking substring of the message. Only for some substrings, there are no tags connected at all. Given the strong consistency, for 99.98% of version 1 tags can be inferred by using the issue message. <br>
 For version 2, unique tags for each analysis are extracted and saved. <br>
-Finally, for version 1 tags are generated. For this, a mapping table is created that contains the original processed issue messages of version 1 combined with tags from version 2 that align with the processed messages. This mapping then is used to assign the tags to the appropriate messages based on the original messages that are also contained in the original issue data of version 1. Tags could be assigned to all open issues which are used for modelling.
+Tags are generated for version 1. For this, a mapping table is created that contains the original processed issue messages of version 1 combined with tags from version 2 that align with the processed messages. This mapping then is used to assign the tags to the appropriate messages based on the original messages that are also contained in the original issue data of version 1. Tags could be assigned to all open issues which are used for modelling.
 
 <a name="merging"></a>
 ### Merging the data from the two database versions
@@ -58,7 +67,7 @@ When merging the two dataframes, it becomes apparent that there is no time varia
 
 <a name="removing-duplicates"></a>
 ### Removing duplicated analysis
-Over the two different database versions, there are duplicated analysis. The dataset before removing duplicates has 144640 rows. An analysis is a duplicate when there are two analysis for the same project at the same point of time. When removing duplicates with pandas by that logic, 144262 rows remain. However, the date format is inconsistent over the two databases (for example: "2014-07-23 18:17:17" and "2014-07-23T18:17:17Z"). When adapting the date strings to follow the format YYYY-MM-DD HH:MM:SS just like the first example string and dropping duplicates, 140748 rows remain.
+The combined dataset initially contained 144,640 rows. Duplicates, defined as analyses for the same project at the same time, were removed. Inconsistent date formats (e.g., "2014-07-23 18:17:17" vs. "2014-07-23T18:17:17Z") were standardized to "YYYY-MM-DD HH:MM:SS" before duplicate removal, resulting in a final dataset of 140,748 rows.
 
 <a name="handle-missingness"></a>
 ### Variable Selection based on missingness
@@ -79,7 +88,7 @@ The resulting dataframe contains 53 columns.
 
 <a name="correlation-analysis"></a>
 ### Correlation Analysis
-To gain further insights on a sensible modelling approach, the relationship between code smells and other metrics needs to be understood. <br>
+To inform the modeling approach, the relationships between code smells and other metrics are examined. <br>
 Since most variables (including amount of code smells) are numerical, a regression approach might be sensible. For this, it is useful to know which variables correlate and therefore might be good predictors.
 
 <a name="correlation-between-all"></a>
@@ -131,3 +140,72 @@ To expose duplications, identifier columns are dropped and duplicates are extrac
 For version 1, there are 5 out of 393 issues that are duplicates. All duplicates describe fixed issues. Therefore, there are 0 open duplicated issues in the version 1 data. <br>
 For version 2, there are 7 duplications for 796 issues. Importantly, these 7 duplications are open issues. There are no clues to hint at a systematic occurence. It is more probable, that the few duplicated errors are reintroduced errors over different commits. <br>
 As a result, it could be confirmed that issues only get tracked once in the commits they got introduced.
+
+<a name="models"></a>
+## Models
+To investigate whether models are able to predict code smells in models, two perspectives are explored. <br>
+The first approach is to predict the amount of code smells that are expected in each commit by the software metrics. It is also of interest to understand which software metrics are most helpful in predicting the amount of code smells successfully. <br>
+For the second approach, the unique tags of new code smells per commit are predicted by software metrics. Again it is investigated what metrics are most useful for this task.
+
+<a name="code-smell-prediction"></a>
+## Predicting the amount of Code Smells
+For predicting how many code smells are to be expected in a commit depending on the software metrics measured by SonarQube, different models are fitted and compared to find an option that succeeds at predicting the amount of code smells the best. <br>
+Since correlation analysis showed that the amount of code smells correlates highly with a lot of metrics, a simple linear regression model is tried. Furthermore, a generalised additive model is chosen for its ability to model the relationship between the label and each predictor individually. Projection pursuit regression is used to explore whether a dimension reduction is useful for a better model performance. Lastly, XGBoost is used for its generally strong performance and ability to handle missing values.
+
+<a name="data-prep-cs"></a>
+### Data preparation for models
+To ensure that all models run on the same quality of data, the data import is streamlined. For this, a python script is used that contains multiple functions. <br>
+The load_df-function reads in the cleaned data from the directory it is saved in. <br>
+The function put_label_in_front() puts the label (in this context CODE_SMELLS) in the first column of the dataframe. This makes it easier to check, whether the following scaling has been done properly. <br>
+The select_variables-function takes a list of variables that should contain all variables to be used for modelling (label and predictors). The dataframe then gets subsetted to only contain those variables and returned. <br>
+The scale_predictors-function scales all numerical variables contained in the subsetted dataframe to be centered (having a mean of 0) and having a standard deviation of 1. <br>
+All models are passed the same selection of variables and the same label. <br>
+The predictors that describe software metrics are the following:
+* CLASSES,
+* FILES
+* LINES
+* NCLOC
+* PACKAGE
+* STATEMENTS
+* FUNCTIONS
+* COMMENT_LINES
+* COMPLEXITY
+* CLASS_COMPLEXITY
+* FUNCTION_COMPLEXITY
+* COGNITIVE_COMPLEXITY
+* LINES_TO_COVER
+* UNCOVERED_LINES
+* DUPLICATED_LINES
+* DUPLICATED_BLOCKS
+* DUPLICATED_FILES
+* COMMENT_LINES_DENSITY
+* DUPLICATED_LINES_DENSITY <br>
+The label is CODE_SMELLS. <br>
+The data containing the data for all projects over all commits has missing values in 29 of the 140748 rows. Since this is such a small share, the rows are omitted all but one model instead of applying a method to fill the missing values. Since XGBoost is able to learn paths for missing values, the 29 rows are included in the modelling process.
+
+<a name="fitting-models-cs"></a>
+### Fitting models to predict the amount of Code Smells
+With the prepared data, each model is now fitted. The train-test-split is 70/30 for each model and is seeded. To evaluate the performance and make the model performance comparable, $`R^2`$, Mean Absolute Error (MAE) and Mean Squared Error (MSE) are calculated on the predictions on the test sets.
+
+<a name="mlr-cs"></a>
+#### Multiple Linear Regression
+As a first approach, each predictor is used to fit a multiple linear regression model. The resulting model has a high MAE and MSE, with two variables shown to be not significant (alpha = 0.05). The $`R^2`$ is very high, showing that the model does represent a high portion of variance provided by the training data properly. Leaving out the two variables and fitting again results in a worse performance and model fit. <br>
+In both cases the model functions return a warning for having a multicollinearity problem. This means that the predictors are strongly correlated to each other which negatively impacts model performance. Multicollinearity can be shown by doing a correlation analysis, which showed high correlations between the metrics. It is also useful to calculate the Variance Inflation Factor (VIF) for each variable to further investigate multicollinearity. A VIF of higher than 10 is considered to indicate strong multicollinearity problems. 13/17 variables are over and significantly over a VIF of 10, showing that multicollinearity indeed is an issue in the data. However, it can be countered by using regularisation. There are ridge and lasso regression as options. However, since removing variables worsened the performance, and lasso regression results in shrinking coefficients to 0, ultimately removing variables from the regression formula, Ridge Regression is chosen instead. <br>
+The ridge regression model relies on cross-validation to find the best alpha value regulating the strength of the penalty term. The resulting best model however performs very similarly to the first model without penelisation, showing that multiple linear regression might not be a good choice for the task at hand.
+
+<a name="gam-cs"></a>
+#### Generalised additive model
+For the GAM, each predictor is fit by using a cubic spline term, resulting in a much improved MAE and MSE compared to the MLR models. The $`R^2`$ is improved. <br>
+When changing cubic spline terms into linear terms for variables where the scatterplot of the amount of code smells and the predictor looks very linear, the performance gets worse.
+
+<a name="ppr-cs"></a>
+#### Projection Pursuit Regression
+Projection Pursuit Regression is a good approach to counter the curse of dimensionality. This can occur when there are a lot of predictors in the data, leading to a high dimensional space, drifting data points more apart. Projection Pursuit Regression projects the data into lower dimensional space (default is 3 dimensions). When fitting the model, the result shows a better performance than both GAM and MLR with a high $`R^2`$.
+
+<a name="xgboost-cs"></a>
+#### XGBoost
+To create a good XGBoost model, a parameter space is defined that contains multiple options per parameter. Through cross-validated grid search, the combination of parameters that minimises the MAE is chosen. The resulting model shows a very low MAE and MSE, leading to the best test performance of all models.
+
+<a name="results-cs"></a>
+### Results
+Out of all the models, XGBoost shows the strongest performance. GAM and PPR show comparable performance. MLR shows the worst performance.
