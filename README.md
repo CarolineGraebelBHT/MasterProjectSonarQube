@@ -6,10 +6,11 @@ Author: Caroline Graebel
 	- [Data Source](#data-source)
 	- [Licensing](#licensing)
 	- [Project Selection](#project-selection)
-	- [Cleaning the Tags in SonarQube Issues](#cleaning-issues)
 	- [Merging the data from the two database versions](#merging)
 	- [Removing duplicated analysis](#removing-duplicates)
 	- [Variable Selection based on missingness](#handle-missingness)
+	- [Cleaning the Tags in SonarQube Issues](#cleaning-issues)
+	- [Merging Tags with Metrics](#tags-metrics-merge)
 - [Analysis](#analysis)
 	- [Correlation Analysis between Code Smells and other variables](#correlation-analysis)
 		- [Correlations between all numerical variables](#correlation-between-all)
@@ -22,6 +23,10 @@ Author: Caroline Graebel
 	- [Analysing the number of issues per commit and duplicated issues](#num-issues-duplis)
 		- [Connection between a commit and the numbers of issues](#num-issues-per-commit)
 		- [Investigating the repetition of issues over different analysis](#duplication-analysis)
+	- [Analysing the data for predicting code smell tags](#tags-model-analysis)
+		- [Distribution of projects](#project-distribution)
+		- [Distribution of tags](#tags-distribution-model)
+		- [Time Analysis per project)(#time-analysis)
 - [Models](#models)
 	- [Predicting the amount of Code Smells](#code-smell-prediction)
 		- [Data preparation for models](#data-prep-cs)
@@ -30,7 +35,9 @@ Author: Caroline Graebel
 			- [Generalised Additive Model](#gam-cs)
 			- [Projection Pursuit Regression](#ppr-cs)
 			- [XGBoost](#xgboost-cs)
+			- [Support Vector Machine](#svm-cs)
 		- [Results](#results-cs)
+	-[Predicting the tags of new Code Smells](#tag-prediction]
 
 <a name="data"></a>
 ## Data
@@ -51,13 +58,6 @@ This research project adheres to the licensing guidelines provided by the creato
 <a name="project-selection"></a>
 ### Project Selection
 The analysis leverages two versions of The Technical Debt Dataset available on GitHub. Version 2 incorporates new projects and removes some existing ones, as outlined in the [(Technical Dataset Github Release Notes)](https://github.com/clowee/The-Technical-Debt-Dataset/releases). To maximise the dataset, projects unique to the first version were combined with the updated and new projects from the second version.
-
-<a name="cleaning-issues"></a>
-### Cleaning the Tags in SonarQube Issues
-To prepare the data for the model, only issues that are code smells are selected. Only columns needed to identify the analysis, tags and issue messages are selected. <br>
-Version 1 doesn't contain a tag column, only version 2 provides information on what tags are associated with the code smell issues. However, the issue message can be in most cases consistently assigned to a set of tags. An exception are messages that are very rare. This makes it possible to infer issue tags for version 1 for the issue messages that are known from version 2. For this, the messages are cleaned off specifics, like concrete variable names or counts. For version 2, there are 390 unique messages after cleaning. When extracting unique tag and message pairs, there are 393 pairs, showing that the pairing of messages and tags is almost completely consistent. Investigated exceptions either have missing tags or contain a subset of tags ("convention" vs "convention,psr2"). When cleaning the messages for version 1 and investigating the intersection between version 1 and version 2 messages, it could be shown that 268/340 unique messages of version 1 are contained in version 2 as well. Furthermore, messages that are not directly contained in version 2 still can be assigned to consistent tags by using a striking substring of the message. Only for some substrings, there are no tags connected at all. Given the strong consistency, for 99.98% of version 1 tags can be inferred by using the issue message. <br>
-For version 2, unique tags for each analysis are extracted and saved. <br>
-Tags are generated for version 1. For this, a mapping table is created that contains the original processed issue messages of version 1 combined with tags from version 2 that align with the processed messages. This mapping then is used to assign the tags to the appropriate messages based on the original messages that are also contained in the original issue data of version 1. Tags could be assigned to all open issues which are used for modelling.
 
 <a name="merging"></a>
 ### Merging the data from the two database versions
@@ -82,6 +82,47 @@ The final resulting dataframe contains 62 columns.
 ### Dropping numerical variables with static values
 When investigating the correlation of variables, there are some variables that can't be correlated. Through investigation it can be shown that some metrics only contain static values over all rows (0). When training a model, metrics that only contain a static value doesn't provide meaningful information (variance) to the learning process. Therefore, they are getting removed. <br>
 The resulting dataframe contains 53 columns.
+
+<a name="cleaning-issues"></a>
+### Cleaning the Tags in SonarQube Issues
+To prepare the data for the model, only issues that are code smells are selected. Only columns needed to identify the analysis, tags and issue messages are selected. <br>
+Version 1 doesn't contain a tag column, only version 2 provides information on what tags are associated with the code smell issues. However, the issue message can be in most cases consistently assigned to a set of tags. An exception are messages that are very rare. This makes it possible to infer issue tags for version 1 for the issue messages that are known from version 2. For this, the messages are cleaned off specifics, like concrete variable names or counts. For version 2, there are 390 unique messages after cleaning. When extracting unique tag and message pairs, there are 393 pairs, showing that the pairing of messages and tags is almost completely consistent. Investigated exceptions either have missing tags or contain a subset of tags ("convention" vs "convention,psr2"). When cleaning the messages for version 1 and investigating the intersection between version 1 and version 2 messages, it could be shown that 268/340 unique messages of version 1 are contained in version 2 as well. Furthermore, messages that are not directly contained in version 2 still can be assigned to consistent tags by using a striking substring of the message. Only for some substrings, there are no tags connected at all. Given the strong consistency, for 99.98% of version 1 tags can be inferred by using the issue message. <br>
+For version 2, unique tags for each analysis are extracted and saved. <br>
+Tags are generated for version 1. For this, a mapping table is created that contains the original processed issue messages of version 1 combined with tags from version 2 that align with the processed messages. This mapping then is used to assign the tags to the appropriate messages based on the original messages that are also contained in the original issue data of version 1. Tags could be assigned to all open issues which are used for modelling.
+
+<a name="tags-metrics-merge"></a>
+### Merging Tags with Metrics
+The goal of merging the tags with their according analysis metrics is to create a dataset to be used for modelling e tags of new code smell issues through the analysis metrics. To bring together the metrics with the tags of the code smell issues detected in that analysis, three different data sources are needed. The combined metrics of database version 1 and 2, containing the necessary identifier columns (ANALYSIS_KEY and COMMIT_HASH) to join them with the issue tags. The tags belonging to the analysis are split by database version. For version 1, the dataframe contains the projectID, the creationCommitHash and the uniqueTags assigned to the new code smells per analysis. For version 2, instead of creationCommitHash there is ANALYSIS_KEY to link the tags to the metrics. <br>
+The tags data is merged with the metrics in two steps, leading to a table of the same size with two different tags columns TAGS_x and TAGS_y (for each version). Both columns don't overlap on any analysis. To bring the tags columns together, first the tags of database 1 are copied into a column TAGS. For each missing value in that column, tags of version 2 are filled where present. <br>
+Next, a subset of variables is selected. The subset contains the software metrics, the tags, the COMMIT_HASH, ANALYSIS_KEY and PROJECT_ID for identification and the SQ_ANALYSIS_DATE to track the time series. The complete list of variables contained in the subset is:
+* 'PROJECT_ID'
+* 'SQ_ANALYSIS_DATE'
+* 'COMMIT_HASH'
+* 'ANALYSIS_KEY'
+* 'CLASSES'
+* 'FILES'
+* 'LINES'
+* 'NCLOC'
+* 'PACKAGE'
+* 'STATEMENTS'
+* 'FUNCTIONS'
+* 'COMMENT_LINES'
+* 'COMPLEXITY'
+* 'CLASS_COMPLEXITY'
+* 'FUNCTION_COMPLEXITY'
+* 'COGNITIVE_COMPLEXITY'
+* 'LINES_TO_COVER'
+* 'UNCOVERED_LINES'
+* 'DUPLICATED_LINES'
+* 'DUPLICATED_BLOCKS'
+* 'DUPLICATED_FILES'
+* 'COMMENT_LINES_DENSITY'
+* 'DUPLICATED_LINES_DENSITY'
+* 'TAGS'
+The resulting dataframe is deduplicated but as expected there are no duplicates. The identifier columns COMMIT_HASH and ANALYSIS_KEY are dropped. <br>
+Next, only those rows are kept in which there is a value for TAGS. After this, only 17775 / 140748 observations remain. <br>
+The tags are filtered. Some tags are flags for violeted rule sets which describe an array of issues and not one specifically. These ruleset-tags are: 'cert', 'cwe', 'misra', 'psr2' and 'code-smell'. Tags which describe a specific issue and are built-in are used. Also tags, where the name is the literal meaning is kept, such as 'redundant' and 'obsolete'. Tags which occur less than a 100 times are considered the tail of the distribution and removed. After this selection, the remaining tags are: 'error-handling', 'convention', 'suspicious', 'pitfall', 'brain-overload', 'unused', 'bad-practice', 'clumsy', 'antipattern', 'redundant', 'performance', 'obsolete' and 'confusing'. <br>
+Based on this, the TAGS values are now cleaned so they only contain the selected tags. Rows which don't contain any tags after this ([]) are removed (596 rows).
 
 <a name="analysis"></a>
 ## Analysis
@@ -141,6 +182,22 @@ For version 1, there are 5 out of 393 issues that are duplicates. All duplicates
 For version 2, there are 7 duplications for 796 issues. Importantly, these 7 duplications are open issues. There are no clues to hint at a systematic occurence. It is more probable, that the few duplicated errors are reintroduced errors over different commits. <br>
 As a result, it could be confirmed that issues only get tracked once in the commits they got introduced.
 
+<a name="#tags-model-analysis"></a>
+### Analysing the data for predicting code smell tags
+For the subset of data selected for predicting code smell tags, distribution of projects and tags are investigated. Lastly, a visualisation for timestamps in the data per project is created to better understand how even the analysis are spread over time.
+
+<a name="#project-distribution"></a>
+#### Distribution of projects
+The representations of projects in the dataset is very uneven, with hive being strongly represented ith over 1750 analysis. Most projects have between 250 and 750 analysis. For some projects there are around 150 or less analysis. Also, not all projects have their issues represented in the dataset. Only 38/39 projects are represented in the data.
+
+<a name="#tags-distribution-model"></a>
+#### Distribution of tags
+Most tags are properly represented, appearing between 2500 and 6000 times in the data. 'redundant', 'performance', 'obsolete', and 'confusing' only appear around or less than a 1000 times in the data. The rarest one is 'confusing' with only 523 appearences.
+
+<a name="#time-analysis"></a>
+#### Time Analysis per project
+When plotting all projects on a timeline, the distance between analysis is inconsistent for most projects. Some have been analysed regularly over a timeframe. There are also projects that have a long history, but for some, they have only been developed shortly. It can't be known whether gaps in the analysis really equal a lack of information more than a change in coding prioritisation, holidays of developers etc.. For most analysis, they still should strongly depend on prior commits.
+
 <a name="models"></a>
 ## Models
 To investigate whether models are able to predict code smells in models, two perspectives are explored. <br>
@@ -150,7 +207,7 @@ For the second approach, the unique tags of new code smells per commit are predi
 <a name="code-smell-prediction"></a>
 ## Predicting the amount of Code Smells
 For predicting how many code smells are to be expected in a commit depending on the software metrics measured by SonarQube, different models are fitted and compared to find an option that succeeds at predicting the amount of code smells the best. <br>
-Since correlation analysis showed that the amount of code smells correlates highly with a lot of metrics, a simple linear regression model is tried. Furthermore, a generalised additive model is chosen for its ability to model the relationship between the label and each predictor individually. Projection pursuit regression is used to explore whether a dimension reduction is useful for a better model performance. Lastly, XGBoost is used for its generally strong performance and ability to handle missing values.
+Since correlation analysis showed that the amount of code smells correlates highly with a lot of metrics, a simple linear regression model is tried. Furthermore, a generalised additive model is chosen for its ability to model the relationship between the label and each predictor individually. Projection pursuit regression is used to explore whether a dimension reduction is useful for a better model performance. XGBoost is used for its generally strong performance and ability to handle missing values. Lastly, a support vector machine is fitted.
 
 <a name="data-prep-cs"></a>
 ### Data preparation for models
