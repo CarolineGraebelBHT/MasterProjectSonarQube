@@ -207,7 +207,7 @@ For the second approach, the unique tags of new code smells per commit are predi
 <a name="code-smell-prediction"></a>
 ## Predicting the amount of Code Smells
 For predicting how many code smells are to be expected in a commit depending on the software metrics measured by SonarQube, different models are fitted and compared to find an option that succeeds at predicting the amount of code smells the best. <br>
-Since correlation analysis showed that the amount of code smells correlates highly with a lot of metrics, a simple linear regression model is tried. Furthermore, a generalised additive model is chosen for its ability to model the relationship between the label and each predictor individually. Projection pursuit regression is used to explore whether a dimension reduction is useful for a better model performance. XGBoost is used for its generally strong performance and ability to handle missing values. Lastly, a support vector machine is fitted.
+Since correlation analysis showed that the amount of code smells correlates highly with a lot of metrics, a simple linear regression model is tried. Furthermore, a generalised additive model is chosen for its ability to model the relationship between the label and each predictor individually. Projection pursuit regression is used to explore whether a dimension reduction is useful for a better model performance. XGBoost is used for its generally strong performance and ability to handle missing values. Lastly, a support vector machine is used for it's flexibility.
 
 <a name="data-prep-cs"></a>
 ### Data preparation for models
@@ -262,6 +262,10 @@ Projection Pursuit Regression is a good approach to counter the curse of dimensi
 <a name="xgboost-cs"></a>
 #### XGBoost
 To create a good XGBoost model, a parameter space is defined that contains multiple options per parameter. Through cross-validated grid search, the combination of parameters that minimises the MAE is chosen. The resulting model shows a very low MAE and MSE, leading to the best test performance of all models.
+
+<a name="#svm-cs"></a>
+#### Support Vector Machine
+Similar to XGBoost, a parameter grid was defined to optimize the model with cross-validated GridSearch. The resulting model has higher errors compared to all models but Linear Regression. It scores a high $`R^2`$.
 
 <a name="results-cs"></a>
 ### Results
