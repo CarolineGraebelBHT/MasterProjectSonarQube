@@ -37,6 +37,10 @@ Author: Caroline Graebel
 			- [XGBoost](#xgboost-cs)
 			- [Support Vector Machine](#svm-cs)
 		- [Results](#results-cs)
+		- [Variable Imortance for the best model](#var-imp-cs)
+			- [Gain](#gain-cs)
+			- [Weight](#weight-cs)
+			- [Cover](#cover-cs)
 	-[Predicting the tags of new Code Smells](#tag-prediction]
 
 <a name="data"></a>
@@ -263,10 +267,29 @@ Projection Pursuit Regression is a good approach to counter the curse of dimensi
 #### XGBoost
 To create a good XGBoost model, a parameter space is defined that contains multiple options per parameter. Through cross-validated grid search, the combination of parameters that minimises the MAE is chosen. The resulting model shows a very low MAE and MSE, leading to the best test performance of all models.
 
-<a name="#svm-cs"></a>
+<a name="svm-cs"></a>
 #### Support Vector Machine
 Similar to XGBoost, a parameter grid was defined to optimize the model with cross-validated GridSearch. The resulting model has higher errors compared to all models but Linear Regression. It scores a high $`R^2`$.
 
 <a name="results-cs"></a>
 ### Results
 Out of all the models, XGBoost shows the strongest performance. GAM and PPR show comparable performance. MLR shows the worst performance.
+
+<a name="var-imp-cs"></a>
+### Variable Imortance for the best model
+Of all the different models used for predicting the amount of Code Smells, XGBoost has shown the best performance. To closer investigate what metrics made an impactful contribution to the model, variable importance of different types is considered: <br>
+* Gain: Gain gives information on what variables contribute most to minimising the error / loss. <br>
+* Weight: Weight is based on how often a variable is used over all tree splits. <br>
+* Cover: Cover gives information on what variables used in tree splits discriminating the biggest amount of samples.
+
+<a name="gain-cs"></a>
+#### Gain
+Based on average gain, the three most important variables are COMPLEXITY, FUNCTION_COMPLEXITY and STATEMENTS. COMPLEXITY is by far the most importance variable. It is intuitive that complex functions are producing Code Smells, which connects it strongly to the amount of Code Smells measured.
+
+<a name="weight-cs"></a>
+#### Weight
+Based on weight, COMMENT_LINES_DENSITY, CLASS_COMPLEXITY and DUPLICATED_LINES_DENSITY are the variables that are mosed used in tree splits.
+
+<a name="cover-cs"></a>
+#### Cover
+Based on cover, FUNCTION_COMPLEXITY, FUNCTIONS and COMPLEXITY are the most important variables. Cover is generally high for complexity variables.
