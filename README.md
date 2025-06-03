@@ -41,7 +41,11 @@ Author: Caroline Graebel
 			- [Gain](#gain-cs)
 			- [Weight](#weight-cs)
 			- [Cover](#cover-cs)
-	-[Predicting the tags of new Code Smells](#tag-prediction]
+	- [Predicting the tags of new Code Smells](#tag-prediction)
+		- [Data Preparation for models)(#data-prep-tags)
+		- [Classifier Chain](#cc-tags)
+			[Classifier Chain with Logistic Regression](#cc-lr)
+			[Classifier Chain with Gradient Boosting)(#cc-gb)
 
 <a name="data"></a>
 ## Data
@@ -209,12 +213,12 @@ The first approach is to predict the amount of code smells that are expected in 
 For the second approach, the unique tags of new code smells per commit are predicted by software metrics. Again it is investigated what metrics are most useful for this task.
 
 <a name="code-smell-prediction"></a>
-## Predicting the amount of Code Smells
+### Predicting the amount of Code Smells
 For predicting how many code smells are to be expected in a commit depending on the software metrics measured by SonarQube, different models are fitted and compared to find an option that succeeds at predicting the amount of code smells the best. <br>
 Since correlation analysis showed that the amount of code smells correlates highly with a lot of metrics, a simple linear regression model is tried. Furthermore, a generalised additive model is chosen for its ability to model the relationship between the label and each predictor individually. Projection pursuit regression is used to explore whether a dimension reduction is useful for a better model performance. XGBoost is used for its generally strong performance and ability to handle missing values. Lastly, a support vector machine is used for it's flexibility.
 
 <a name="data-prep-cs"></a>
-### Data preparation for models
+#### Data preparation for models
 To ensure that all models run on the same quality of data, the data import is streamlined. For this, a python script is used that contains multiple functions. <br>
 The load_df-function reads in the cleaned data from the directory it is saved in. <br>
 The function put_label_in_front() puts the label (in this context CODE_SMELLS) in the first column of the dataframe. This makes it easier to check, whether the following scaling has been done properly. <br>
@@ -245,51 +249,81 @@ The label is CODE_SMELLS. <br>
 The data containing the data for all projects over all commits has missing values in 29 of the 140748 rows. Since this is such a small share, the rows are omitted all but one model instead of applying a method to fill the missing values. Since XGBoost is able to learn paths for missing values, the 29 rows are included in the modelling process.
 
 <a name="fitting-models-cs"></a>
-### Fitting models to predict the amount of Code Smells
+#### Fitting models to predict the amount of Code Smells
 With the prepared data, each model is now fitted. The train-test-split is 70/30 for each model and is seeded. To evaluate the performance and make the model performance comparable, $`R^2`$, Mean Absolute Error (MAE) and Mean Squared Error (MSE) are calculated on the predictions on the test sets.
 
 <a name="mlr-cs"></a>
-#### Multiple Linear Regression
+##### Multiple Linear Regression
 As a first approach, each predictor is used to fit a multiple linear regression model. The resulting model has a high MAE and MSE, with two variables shown to be not significant (alpha = 0.05). The $`R^2`$ is very high, showing that the model does represent a high portion of variance provided by the training data properly. Leaving out the two variables and fitting again results in a worse performance and model fit. <br>
 In both cases the model functions return a warning for having a multicollinearity problem. This means that the predictors are strongly correlated to each other which negatively impacts model performance. Multicollinearity can be shown by doing a correlation analysis, which showed high correlations between the metrics. It is also useful to calculate the Variance Inflation Factor (VIF) for each variable to further investigate multicollinearity. A VIF of higher than 10 is considered to indicate strong multicollinearity problems. 13/17 variables are over and significantly over a VIF of 10, showing that multicollinearity indeed is an issue in the data. However, it can be countered by using regularisation. There are ridge and lasso regression as options. However, since removing variables worsened the performance, and lasso regression results in shrinking coefficients to 0, ultimately removing variables from the regression formula, Ridge Regression is chosen instead. <br>
 The ridge regression model relies on cross-validation to find the best alpha value regulating the strength of the penalty term. The resulting best model however performs very similarly to the first model without penelisation, showing that multiple linear regression might not be a good choice for the task at hand.
 
 <a name="gam-cs"></a>
-#### Generalised additive model
+##### Generalised additive model
 For the GAM, each predictor is fit by using a cubic spline term, resulting in a much improved MAE and MSE compared to the MLR models. The $`R^2`$ is improved. <br>
 When changing cubic spline terms into linear terms for variables where the scatterplot of the amount of code smells and the predictor looks very linear, the performance gets worse.
 
 <a name="ppr-cs"></a>
-#### Projection Pursuit Regression
+##### Projection Pursuit Regression
 Projection Pursuit Regression is a good approach to counter the curse of dimensionality. This can occur when there are a lot of predictors in the data, leading to a high dimensional space, drifting data points more apart. Projection Pursuit Regression projects the data into lower dimensional space (default is 3 dimensions). When fitting the model, the result shows a better performance than both GAM and MLR with a high $`R^2`$.
 
 <a name="xgboost-cs"></a>
-#### XGBoost
+##### XGBoost
 To create a good XGBoost model, a parameter space is defined that contains multiple options per parameter. Through cross-validated grid search, the combination of parameters that minimises the MAE is chosen. The resulting model shows a very low MAE and MSE, leading to the best test performance of all models.
 
 <a name="svm-cs"></a>
-#### Support Vector Machine
+##### Support Vector Machine
 Similar to XGBoost, a parameter grid was defined to optimize the model with cross-validated GridSearch. The resulting model has higher errors compared to all models but Linear Regression. It scores a high $`R^2`$.
 
 <a name="results-cs"></a>
-### Results
+#### Results
 Out of all the models, XGBoost shows the strongest performance. GAM and PPR show comparable performance. MLR shows the worst performance.
 
 <a name="var-imp-cs"></a>
-### Variable Imortance for the best model
+#### Variable Imortance for the best model
 Of all the different models used for predicting the amount of Code Smells, XGBoost has shown the best performance. To closer investigate what metrics made an impactful contribution to the model, variable importance of different types is considered: <br>
 * Gain: Gain gives information on what variables contribute most to minimising the error / loss. <br>
 * Weight: Weight is based on how often a variable is used over all tree splits. <br>
 * Cover: Cover gives information on what variables used in tree splits discriminating the biggest amount of samples.
 
 <a name="gain-cs"></a>
-#### Gain
+##### Gain
 Based on average gain, the three most important variables are COMPLEXITY, FUNCTION_COMPLEXITY and STATEMENTS. COMPLEXITY is by far the most importance variable. It is intuitive that complex functions are producing Code Smells, which connects it strongly to the amount of Code Smells measured.
 
 <a name="weight-cs"></a>
-#### Weight
+##### Weight
 Based on weight, COMMENT_LINES_DENSITY, CLASS_COMPLEXITY and DUPLICATED_LINES_DENSITY are the variables that are mosed used in tree splits.
 
 <a name="cover-cs"></a>
-#### Cover
+##### Cover
 Based on cover, FUNCTION_COMPLEXITY, FUNCTIONS and COMPLEXITY are the most important variables. Cover is generally high for complexity variables.
+
+<a name="tag-prediction"></a>
+### Predicting the tags of new Code Smells
+New code smells that have been detected in an analysis are represented by their unique tags over all new issues that have been detected. <br>
+To model the new code smell tags, a convolutional neural network (CNN) is used. CNNs can model spatial dependencies, which is used to model the time series aspect of the commits. Furthermore it's naturally able to classify multiple labels, assigning a probability to each tag there is. These can be ranked, showing which tags the model estimates to be in a new analysis with no code smells detected. <br>
+For a second approach, classifier chains are used to model the temporal relationship between the analysis and between the different tags. As base models, logistic regression and gradient boosting are used. <br>
+Lastly, fitting a model for each of the 14 tags is done. This will not consider the temporal relationship or relationship between labels. However, it can show whether there are tags are easier to model than others.
+
+<a name="data-prep-tags"></a>
+#### Data Preparation for models
+The data that is used for the models results from merging the unique tags per analysis with the software metrics. Since Classifier Chains and CNN model dependencies, only project hive's analysis are used for all models. The resulting dataframe is used for all models. For each model, predictors are scaled and tags are one-hot-encoded.
+
+<a name="cc-tags"></a>
+#### Classifier Chain
+Classifier Chain is an ensemble model that is built for multi-label classification. It is able to catch potential correlated relationships between the different tags. The chain is done through feeding the prediction of one classifier into the next. This method is chosen to model the time series analysis with their newly occurring tags. To evaluate model performance, the Jaccard score is calculated. The Jaccard score describes the average portion of overlap between the predicted set and the true set in percent. Since both used Classifier Chain base models produce probabilites, different thresholds are tested for classifiction and compared based on the Jaccard score for each threshold. Specifically, each threshold is compared to the score of the minimum threshold of 0, meaning that all labels get predicted for all observations. This serves as the baseline performance for each model.
+
+<a name="cc-lr"></a>
+#### Classifier Chain with Logistic Regression
+Logistic Regression is use for being a binary classifier, matching the binary one-hot-encoded labels. <br>
+The model performs poorly, with a minimum Jaccard score of 0 resulting in an average 20.8% overlap between predicted and true labels, with higher thresholds only achieving the same or slightly more coverage. The best threshold for Logistic Regression is 0.9, scoring 22.7%.
+
+<a name="cc-lr"></a>
+#### Classifier Chain with Logistic Regression
+Logistic Regression is used for being a stae of the art binary classifier, matching the binary one-hot-encoded labels. <br>
+The model performs poorly, with a minimum Jaccard score of 0 resulting in an average 20.8% overlap between predicted and true labels, with higher thresholds only achieving the same or slightly more coverage. The best threshold for Logistic Regression is 0.9, scoring 22.7%.
+
+<a name="cc-gb"></a>
+#### Classifier Chain with Gradient Boosting
+Gradient Boosting is used as a state of the art tree model. It is more complex, being a ensemble model that fits multiple small trees. <br>
+The model performs similar to Logistic Regression, with a minimum Jaccard score of 0 resulting in an average 20.8% overlap between predicted and true labels, with higher thresholds only achieving the same or slightly more coverage. The best threshold for Logistic Regression is 0.1, scoring 23.7%. The model performance is poor.
