@@ -46,6 +46,10 @@ Author: Caroline Graebel
 		- [Classifier Chain](#cc-tags)
 			[Classifier Chain with Logistic Regression](#cc-lr)
 			[Classifier Chain with Gradient Boosting)(#cc-gb)
+		- [Convolutional Neural Network: ResNet18](#cnn-tags)
+			- [Splitting Data into Timewindows](#cnn-tw)
+			- [1D Resnet18 architecture](#cnn-arch)
+			- [Modelling and Results](#cnn-res)
 
 <a name="data"></a>
 ## Data
@@ -314,16 +318,27 @@ The data that is used for the models results from merging the unique tags per an
 Classifier Chain is an ensemble model that is built for multi-label classification. It is able to catch potential correlated relationships between the different tags. The chain is done through feeding the prediction of one classifier into the next. This method is chosen to model the time series analysis with their newly occurring tags. To evaluate model performance, the Jaccard score is calculated. The Jaccard score describes the average portion of overlap between the predicted set and the true set in percent. Since both used Classifier Chain base models produce probabilites, different thresholds are tested for classifiction and compared based on the Jaccard score for each threshold. Specifically, each threshold is compared to the score of the minimum threshold of 0, meaning that all labels get predicted for all observations. This serves as the baseline performance for each model.
 
 <a name="cc-lr"></a>
-#### Classifier Chain with Logistic Regression
-Logistic Regression is use for being a binary classifier, matching the binary one-hot-encoded labels. <br>
-The model performs poorly, with a minimum Jaccard score of 0 resulting in an average 20.8% overlap between predicted and true labels, with higher thresholds only achieving the same or slightly more coverage. The best threshold for Logistic Regression is 0.9, scoring 22.7%.
-
-<a name="cc-lr"></a>
-#### Classifier Chain with Logistic Regression
-Logistic Regression is used for being a stae of the art binary classifier, matching the binary one-hot-encoded labels. <br>
+##### Classifier Chain with Logistic Regression
+Logistic Regression is used for being a state of the art binary classifier, matching the binary one-hot-encoded labels. <br>
 The model performs poorly, with a minimum Jaccard score of 0 resulting in an average 20.8% overlap between predicted and true labels, with higher thresholds only achieving the same or slightly more coverage. The best threshold for Logistic Regression is 0.9, scoring 22.7%.
 
 <a name="cc-gb"></a>
-#### Classifier Chain with Gradient Boosting
+##### Classifier Chain with Gradient Boosting
 Gradient Boosting is used as a state of the art tree model. It is more complex, being a ensemble model that fits multiple small trees. <br>
 The model performs similar to Logistic Regression, with a minimum Jaccard score of 0 resulting in an average 20.8% overlap between predicted and true labels, with higher thresholds only achieving the same or slightly more coverage. The best threshold for Logistic Regression is 0.1, scoring 23.7%. The model performance is poor.
+
+<a name="cnn-tags"></a>
+#### Convolutional Neural Network: ResNet18
+The ResNet architecture is chosen because it was originally invented for time-series-prediction. It is also one of the more efficient architectures when it comes to CNNs. To investigate whether the architecture is applicable to the prediction problem, a smaller architecture is used for testing purposes, ResNet18. This architecture will be used with 1D convolutional layers to predict the new tags occurring in new analysis. To ensure optimal success, the CNN is trained with the analysis data of project hive, which provides the most data points.
+
+<a name="cnn-tw"></a>
+##### Splitting Data into Timewindows
+To accomodate the prediction task, the predictors and according labels need to be split into timewindows, to set up a shift window attention approach. In this, only a small timewindow of analysis is provided to the model at a time. The timewindows overlap by half, to make data use more efficient.
+
+<a name="cnn-arch"></a>
+##### 1D Resnet18 architecture
+The architecture follows a ResNet18 architecture ([Diagram of original ResNet18 architecture](https://www.researchgate.net/profile/Poorya-Mohammadinasab/publication/373653509/figure/fig1/AS:11431281186311794@1693861891854/Original-ResNet-18-Architecture.png)). It is adapted to fit a 1D-problem, meaning that each predictor is passed as a 1D-vector. ResNet has the ability to "skip connections": this allows information to bypass some layers, helping the network learn more effectively even when it's very deep. It consists of a convolutional layer with a batch normalisation, ReLu activation and a max pool layer at the beginning. This is followed by four blocks. Each block contains two convolutional layers, again followed by batch normalization and ReLU activation. Once the data has passed through all four building block stages, an average pooling layer summarizes the learned features. This prepares the data for the final step: a linear transformation. This final layer outputs raw logits, which are essentially scores for each possible "tag" or category. These scores are then used to determine the probabilities that a specific tag appears in your analysis, making it suitable for multi-classification tasks where multiple tags can apply.
+
+<a name="cnn-res"></a>
+##### Modelling and Results
+The data is split into training, validation and testing set. Training and validation set are used for hyperparameter optimisation (HPO). HPO is done using SciKit Learn's Optuna. Optuna tries promising combinations of hyperparameters over 50 different trials. The resulting model uses a batch_size of 32, a learning rate of 0.0005 and RMSprop for optimisation. The training and testing data then is used for fitting the CNN with optimised parameters and evaluating model performance. For observations independent from the tags, F1-Score is 0.31, precision 0.28 and recall is 0.34, showing a poor general performance. For class specific evaluation, performance is even worse. With an F1-Score of 0.08, Precision of 0.06 and Recall of 0.14, evaluation per class shows that the model is poorly adapted to the classification task. A big problem is, that the project used has the most analysis out of all the projects, but still only around 1850 observations. This makes it hard for the model to properly adapt, making the CNN approach not suitable when using shift window attention.
