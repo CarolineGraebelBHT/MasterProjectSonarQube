@@ -43,9 +43,13 @@ Author: Caroline Graebel
 			- [Cover](#cover-cs)
 	- [Predicting the tags of new Code Smells](#tag-prediction)
 		- [Data Preparation for models)(#data-prep-tags)
+		- [Binary Relevance](#br-tags)
+			- [Logistic Regression](#br-lr)
+			- [Random Forest](#br-lr)
+			- [XGBoost](#br-xg)
 		- [Classifier Chain](#cc-tags)
-			[Classifier Chain with Logistic Regression](#cc-lr)
-			[Classifier Chain with Gradient Boosting)(#cc-gb)
+			- [Classifier Chain with Logistic Regression](#cc-lr)
+			- [Classifier Chain with Gradient Boosting)(#cc-gb)
 		- [Convolutional Neural Network: ResNet18](#cnn-tags)
 			- [Splitting Data into Timewindows](#cnn-tw)
 			- [1D Resnet18 architecture](#cnn-arch)
@@ -312,6 +316,26 @@ Lastly, fitting a model for each of the 14 tags is done. This will not consider 
 <a name="data-prep-tags"></a>
 #### Data Preparation for models
 The data that is used for the models results from merging the unique tags per analysis with the software metrics. Since Classifier Chains and CNN model dependencies, only project hive's analysis are used for all models. The resulting dataframe is used for all models. For each model, predictors are scaled and tags are one-hot-encoded.
+
+<a name="br-tags"></a>
+#### Binary Relevance
+A basic approach to solve a multilabel classification problem is to fit a model for each label there is. In the case of the code smell tags, there are 14 different tags, which means fitting 14 models to each tag. For this, labels need to be one-hot-encoded, which results in 14 columns of binary columns (the tag exists for this analysis or not). This turns the multilabel problem into multiple smaller binary problems. This approach can't model dependencies between observations, which makes it incapable of catching any effects prior commits might have on new code smells detected. <br>
+Since for a lot of the tags the classes are unbalanced (more negative than positive occurences), the models are optimised for the F1-score. Accuracy would be a good choice for a balanced scenario, since correct classification is a top priority. However, since there's unbalance, models tend to predict the dominant class for all observations, leading to an overall poor result when it comes to model performance except for accuracy. To counter this, a balance of recall and precision is more desirable. <br>
+Class balancing is applied to all models. Stratified K-fold is used in gridsearch to ensure that there are both classes represented in each fold.
+
+<a name="br-lr"></a>
+##### Logistic Regression
+For logistic regression, the resulting probabilities from prediction need to be handled with extra care, as a threshold needs to be chosen for when to decide for one class or the other. Each model goes through the same optimisation with the same hyperparameter spaces and thresholds. During grid search, the F1-score is optimised for different prediction thresholds. <br>
+For the different tags, no model reached a better ROC AUC than 0.6. The F1-score performance seems tied to class balance, as more represented tags tend to score better than rare tags.
+
+<a name="br-rf"></a>
+##### Random Forest
+For random forest, ROC AUC performs slightly worse compared to logistic regression, with models scoring no higher than 0.55. F1-score is also worse, with the most unbalanced tags 'confusing', 'performance' and 'obsolete' scoring an F1 of 0.
+
+<a name="br-xg"></a>
+##### XGBoost
+For XGBoost, weighting is applied through the parameter 'scale_pos_weight'. There is an extra weight applied to positive occurences based on how often they appear. This is done through calculating the division of negative occurences by positive occurences. <br>
+XGBoost performs similarly to random forest, with no ROC AUC scoring higher than 0.55. F1-scores are also generally quite low.
 
 <a name="cc-tags"></a>
 #### Classifier Chain
