@@ -6,7 +6,7 @@ def load_df(current_dir):
     """This function loads the data from the according path into a pandas dataframe."""
 
     # construct path to the project data folder
-    data_dir = os.path.join(current_dir, '..', '..', 'Data', 'Sonar_Measures')
+    data_dir = os.path.join(current_dir, '..', '..', '..', 'Data', 'Sonar_Measures')
     # load SonarQube measure data of version 1 and 2, cleaned
     df = pd.read_csv(os.path.join(data_dir, 'sonar_measures_v1_v2_no_statics.csv'), low_memory=False)
     return df
